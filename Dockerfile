@@ -1,0 +1,37 @@
+FROM php:8.0-apache
+
+# Set working directory
+WORKDIR /var/www/html
+
+# Install dependencies
+RUN apt-get update && \
+    apt-get install -y \
+    git \
+    unzip \
+    libpq-dev && \
+    docker-php-ext-install pdo pdo_mysql pdo_pgsql && \
+    a2enmod rewrite
+
+# Copy source code to working directory
+COPY . .
+
+RUN chmod -R 777 storage
+
+# Install Composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+# Install application dependencies
+# RUN composer install --prefer-dist --no-scripts --no-dev --ignore-platform-reqs --no-interaction
+RUN composer install --prefer-dist --no-scripts --ignore-platform-reqs --no-interaction
+
+# Copy Apache virtual host file
+COPY docker/vhost.conf /etc/apache2/sites-available/000-default.conf
+
+# Enable Apache rewrite module
+RUN a2enmod rewrite
+
+# Expose port 80
+EXPOSE 80
+
+# Start Apache
+CMD ["/usr/sbin/apache2ctl", "-D", "FOREGROUND"]
